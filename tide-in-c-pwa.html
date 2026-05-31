@@ -1,0 +1,1080 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <meta name="theme-color" content="#e8600a">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Tide In C">
+  <title>Tide In C</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Jersey+10&family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --cream:   #fdf6ee;
+      --peach:   #fff0d8;
+      --orange:  #e8600a;
+      --orange2: #c84000;
+      --gold:    #f0b060;
+      --blue:    #2288cc;
+      --blue-bg: #e8f4fc;
+      --dark:    #1a1208;
+      --muted:   #a07850;
+      --green:   #22aa55;
+      --red:     #cc3820;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--cream);
+      font-family: 'Courier Prime', monospace;
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      overflow-x: hidden;
+    }
+
+    /* ── WRAPPER — phone-like container on desktop ── */
+    .app {
+      width: 100%;
+      max-width: 420px;
+      min-height: 100dvh;
+      background: var(--cream);
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* ── SCENE — animated top panel ── */
+    .scene {
+      width: 100%;
+      height: 200px;
+      position: relative;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+    #scene-canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    /* ── ORANGE ACCENT LINE ── */
+    .accent {
+      width: 100%;
+      height: 4px;
+      background: var(--orange);
+      flex-shrink: 0;
+      position: relative;
+    }
+    .accent::after {
+      content: '';
+      position: absolute;
+      bottom: -3px;
+      left: 0; right: 0;
+      height: 2px;
+      background: repeating-linear-gradient(
+        90deg, var(--gold) 0px, var(--gold) 6px, transparent 6px, transparent 10px
+      );
+    }
+
+    /* ── TIME BLOCK ── */
+    .time-block {
+      background: white;
+      padding: 10px 14px 4px;
+      flex-shrink: 0;
+    }
+    .time-display {
+      font-family: 'Jersey 10', monospace;
+      font-size: clamp(52px, 14vw, 72px);
+      color: var(--dark);
+      line-height: 1;
+      letter-spacing: 2px;
+    }
+    .date-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      padding: 2px 0 6px;
+    }
+    .date-str {
+      font-size: clamp(13px, 3.5vw, 16px);
+      font-weight: 700;
+      color: var(--orange);
+    }
+    .location-str {
+      font-size: clamp(12px, 3vw, 15px);
+      color: var(--muted);
+    }
+
+    /* ── ORANGE RULE ── */
+    .rule {
+      height: 2px;
+      background: var(--orange);
+      margin: 0;
+      flex-shrink: 0;
+    }
+
+    /* ── PANEL ── */
+    .panel {
+      flex: 1;
+      padding: 10px 10px 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      background: var(--cream);
+    }
+
+    /* ── CARD BASE ── */
+    .card {
+      border: 2px solid;
+      border-radius: 2px;
+      padding: 8px 10px;
+      position: relative;
+      background: var(--peach);
+    }
+    .card::before, .card::after,
+    .card .corner-tl, .card .corner-tr,
+    .card .corner-bl, .card .corner-br {
+      content: '';
+      position: absolute;
+      width: 12px; height: 12px;
+      border-color: inherit;
+    }
+    /* Corner brackets via pseudo + spans */
+    .card .corners { display: none; }
+
+    .card-label {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      opacity: 0.7;
+      margin-bottom: 2px;
+    }
+    .card-value {
+      font-family: 'Jersey 10', monospace;
+      font-size: clamp(28px, 8vw, 38px);
+      line-height: 1;
+      color: var(--dark);
+    }
+    .card-sub {
+      font-size: clamp(11px, 3vw, 13px);
+      margin-top: 2px;
+      color: var(--muted);
+    }
+
+    /* ── TIDE NOW CARD ── */
+    .tide-card {
+      border-color: var(--orange);
+    }
+    .tide-card .card-label { color: var(--orange2); }
+
+    .tide-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    /* ── PILL ── */
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 5px 12px;
+      border: 1.5px solid;
+      font-size: clamp(12px, 3.5vw, 14px);
+      font-weight: 700;
+      letter-spacing: 1px;
+      border-radius: 2px;
+      white-space: nowrap;
+    }
+    .pill.rising  { background: var(--orange); border-color: var(--orange2); color: white; }
+    .pill.falling { background: var(--blue);   border-color: #1a66aa;        color: white; }
+
+    /* ── HIGH / LOW ROW ── */
+    .hl-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+    .high-card {
+      border-color: var(--orange);
+      background: var(--peach);
+    }
+    .high-card .card-label { color: var(--orange2); }
+    .high-card .inline-time { color: var(--orange); }
+
+    .low-card {
+      border-color: var(--blue);
+      background: var(--blue-bg);
+    }
+    .low-card .card-label { color: var(--blue); }
+    .low-card .inline-time { color: var(--blue); }
+
+    .inline-row {
+      display: flex;
+      align-items: baseline;
+      gap: 6px;
+    }
+    .inline-height {
+      font-family: 'Jersey 10', monospace;
+      font-size: clamp(22px, 6vw, 30px);
+      color: var(--dark);
+      line-height: 1;
+    }
+    .inline-time {
+      font-size: clamp(12px, 3.2vw, 15px);
+      font-weight: 700;
+    }
+
+    /* ── CHART SECTION ── */
+    .chart-section {
+      border: 2px solid var(--orange);
+      background: white;
+      position: relative;
+      overflow: hidden;
+    }
+    .chart-header {
+      background: white;
+      border-bottom: 1.5px solid var(--gold);
+      padding: 6px 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .chart-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--orange);
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+    .chart-toggle {
+      display: flex;
+      gap: 4px;
+    }
+    .chart-btn {
+      background: none;
+      border: 1.5px solid var(--gold);
+      color: var(--muted);
+      font-family: 'Courier Prime', monospace;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 8px;
+      cursor: pointer;
+      border-radius: 2px;
+    }
+    .chart-btn.active {
+      background: var(--orange);
+      border-color: var(--orange2);
+      color: white;
+    }
+    #chart-canvas {
+      display: block;
+      width: 100%;
+      height: 160px;
+    }
+
+    /* ── REFRESH BUTTON ── */
+    .refresh-row {
+      display: flex;
+      justify-content: center;
+      padding: 4px 0 2px;
+    }
+    .refresh-btn {
+      background: none;
+      border: 2px solid var(--orange);
+      color: var(--orange);
+      font-family: 'Courier Prime', monospace;
+      font-size: 13px;
+      font-weight: 700;
+      padding: 8px 28px;
+      cursor: pointer;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      border-radius: 2px;
+      transition: background 0.15s, color 0.15s;
+      position: relative;
+    }
+    .refresh-btn:active,
+    .refresh-btn.loading {
+      background: var(--orange);
+      color: white;
+    }
+
+    /* ── SETTINGS OVERLAY ── */
+    .settings-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(253,246,238,0.97);
+      z-index: 100;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+    .settings-overlay.open { display: flex; }
+    .settings-box {
+      width: 100%;
+      max-width: 380px;
+      border: 2px solid var(--orange);
+      background: white;
+      padding: 24px;
+      position: relative;
+    }
+    .settings-title {
+      font-family: 'Jersey 10', monospace;
+      font-size: 28px;
+      color: var(--orange);
+      margin-bottom: 6px;
+    }
+    .settings-desc {
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 20px;
+      line-height: 1.5;
+    }
+    .settings-desc a { color: var(--orange); }
+    .field-label {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--orange2);
+      margin-bottom: 4px;
+    }
+    .field-input {
+      width: 100%;
+      border: 1.5px solid var(--gold);
+      background: var(--peach);
+      font-family: 'Courier Prime', monospace;
+      font-size: 13px;
+      padding: 8px 10px;
+      margin-bottom: 14px;
+      outline: none;
+      color: var(--dark);
+      border-radius: 2px;
+    }
+    .field-input:focus { border-color: var(--orange); }
+    .field-select {
+      width: 100%;
+      border: 1.5px solid var(--gold);
+      background: var(--peach);
+      font-family: 'Courier Prime', monospace;
+      font-size: 13px;
+      padding: 8px 10px;
+      margin-bottom: 20px;
+      outline: none;
+      color: var(--dark);
+      border-radius: 2px;
+      appearance: none;
+    }
+    .save-btn {
+      width: 100%;
+      background: var(--orange);
+      border: none;
+      color: white;
+      font-family: 'Courier Prime', monospace;
+      font-size: 14px;
+      font-weight: 700;
+      padding: 12px;
+      cursor: pointer;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      border-radius: 2px;
+    }
+    .save-btn:active { background: var(--orange2); }
+    .settings-close {
+      position: absolute;
+      top: 12px; right: 14px;
+      background: none;
+      border: none;
+      font-size: 20px;
+      color: var(--orange);
+      cursor: pointer;
+    }
+
+    /* ── STATUS BAR ── */
+    .status-bar {
+      height: 4px;
+      background: var(--gold);
+      flex-shrink: 0;
+      position: relative;
+    }
+    .status-fill {
+      height: 100%;
+      background: var(--green);
+      width: 0%;
+      transition: width 0.3s;
+    }
+
+    /* ── GEAR BUTTON ── */
+    .gear-btn {
+      position: absolute;
+      top: 10px;
+      right: 12px;
+      width: 32px;
+      height: 32px;
+      background: rgba(255,255,255,0.85);
+      border: 1.5px solid var(--gold);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 16px;
+      z-index: 10;
+      backdrop-filter: blur(4px);
+    }
+
+    /* ── NO KEY STATE ── */
+    .no-key {
+      text-align: center;
+      padding: 20px;
+      border: 2px dashed var(--gold);
+      margin: 8px 0;
+    }
+    .no-key p {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.6;
+      margin-bottom: 10px;
+    }
+    .no-key strong { color: var(--orange); }
+
+    /* ── LOADING SHIMMER ── */
+    @keyframes shimmer {
+      0% { opacity: 0.4; }
+      50% { opacity: 0.9; }
+      100% { opacity: 0.4; }
+    }
+    .loading-val { animation: shimmer 1.2s infinite; color: var(--gold) !important; }
+
+    /* ── INSTALL BANNER (iOS) ── */
+    .install-banner {
+      display: none;
+      background: var(--orange);
+      color: white;
+      font-size: 12px;
+      text-align: center;
+      padding: 8px 12px;
+      line-height: 1.5;
+    }
+    .install-banner.show { display: block; }
+  </style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- Install banner for iOS -->
+  <div class="install-banner" id="install-banner">
+    📲 Add to Home Screen: tap <strong>Share</strong> then <strong>Add to Home Screen</strong> for widget-like access
+  </div>
+
+  <!-- Gear / settings -->
+  <button class="gear-btn" onclick="openSettings()" title="Settings">⚙</button>
+
+  <!-- Animated scene -->
+  <div class="scene">
+    <canvas id="scene-canvas"></canvas>
+  </div>
+
+  <!-- Orange accent -->
+  <div class="accent"></div>
+
+  <!-- Time block -->
+  <div class="time-block">
+    <div class="time-display" id="time-display">--:--</div>
+    <div class="date-row">
+      <span class="date-str" id="date-display">--- -- ---</span>
+      <span class="location-str" id="location-display">Locating…</span>
+    </div>
+  </div>
+
+  <div class="rule"></div>
+
+  <!-- Panel -->
+  <div class="panel" id="panel">
+
+    <!-- Tide Now -->
+    <div class="card tide-card" id="tide-card">
+      <div class="card-label">Tide Now</div>
+      <div class="tide-row">
+        <div class="card-value loading-val" id="tide-height">-.-m</div>
+        <div class="pill rising" id="tide-pill">▲ RISING</div>
+      </div>
+    </div>
+
+    <!-- High / Low -->
+    <div class="hl-row">
+      <div class="card high-card">
+        <div class="card-label">High</div>
+        <div class="inline-row">
+          <div class="inline-height loading-val" id="high-height">-.-m</div>
+          <div class="inline-time high-card" id="high-time">--:--</div>
+        </div>
+      </div>
+      <div class="card low-card">
+        <div class="card-label">Low</div>
+        <div class="inline-row">
+          <div class="inline-height loading-val" id="low-height">-.-m</div>
+          <div class="inline-time low-card" id="low-time">--:--</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Chart -->
+    <div class="card chart-section" id="chart-section" style="padding:0;">
+      <div class="chart-header">
+        <span class="chart-title" id="chart-title">24H Tide Chart</span>
+        <div class="chart-toggle">
+          <button class="chart-btn active" id="btn-today" onclick="showChart('today')">Today</button>
+          <button class="chart-btn" id="btn-tmr"   onclick="showChart('tomorrow')">Tomorrow</button>
+        </div>
+      </div>
+      <canvas id="chart-canvas"></canvas>
+    </div>
+
+    <!-- No key state -->
+    <div class="no-key" id="no-key-msg" style="display:none;">
+      <p>⚓ <strong>WorldTides API key needed</strong><br>
+      Tap ⚙ to enter your key.<br>
+      Free tier: 10,000 requests/month.</p>
+      <p style="font-size:11px;">Get a key at <strong>worldtides.info/developer</strong></p>
+    </div>
+
+    <!-- Refresh -->
+    <div class="refresh-row">
+      <button class="refresh-btn" id="refresh-btn" onclick="refresh()">⟳ Refresh</button>
+    </div>
+
+  </div>
+
+  <!-- Status bar -->
+  <div class="status-bar"><div class="status-fill" id="status-fill"></div></div>
+</div>
+
+<!-- Settings overlay -->
+<div class="settings-overlay" id="settings-overlay">
+  <div class="settings-box">
+    <button class="settings-close" onclick="closeSettings()">✕</button>
+    <div class="settings-title">Settings</div>
+    <div class="settings-desc">
+      Get a free API key at
+      <a href="https://www.worldtides.info/developer" target="_blank">worldtides.info/developer</a>
+      — 10,000 requests/month free.
+    </div>
+    <div class="field-label">WorldTides API Key</div>
+    <input class="field-input" id="key-input" type="text" placeholder="Paste your API key here" autocomplete="off" spellcheck="false">
+    <div class="field-label">Height Reference (Datum)</div>
+    <select class="field-select" id="datum-select">
+      <option value="LAT">LAT — Lowest Astronomical Tide</option>
+      <option value="MLLW">MLLW — Mean Lower Low Water</option>
+      <option value="MSL">MSL — Mean Sea Level</option>
+      <option value="CD">CD — Chart Datum</option>
+    </select>
+    <button class="save-btn" onclick="saveSettings()">Save &amp; Refresh</button>
+  </div>
+</div>
+
+<script>
+// ================================================================
+// TIDE IN C — PWA
+// Surf shop theme, Sunny Day animation, live WorldTides data
+// ================================================================
+
+// ── State ────────────────────────────────────────────────────
+var apiKey  = localStorage.getItem('worldtides_api_key') || '';
+var datum   = localStorage.getItem('worldtides_datum')   || 'LAT';
+var cache   = null;
+var cacheTm = 0;
+var CACHE_MAX = 2 * 60 * 60 * 1000;
+
+var graphToday    = [];
+var graphTomorrow = [];
+var graphNowIdx   = 0;
+var activeChart   = 'today';
+
+// ── Clock ─────────────────────────────────────────────────────
+function pad(n){ return n < 10 ? '0'+n : ''+n; }
+function updateClock(){
+  var d = new Date();
+  var h = d.getHours(), m = d.getMinutes();
+  document.getElementById('time-display').textContent = pad(h)+':'+pad(m);
+  var days   = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  document.getElementById('date-display').textContent =
+    days[d.getDay()]+' '+pad(d.getDate())+' '+months[d.getMonth()];
+}
+updateClock();
+setInterval(updateClock, 10000);
+
+// ── Settings ──────────────────────────────────────────────────
+function openSettings(){
+  document.getElementById('key-input').value = apiKey;
+  document.getElementById('datum-select').value = datum;
+  document.getElementById('settings-overlay').classList.add('open');
+}
+function closeSettings(){
+  document.getElementById('settings-overlay').classList.remove('open');
+}
+function saveSettings(){
+  var k = document.getElementById('key-input').value.trim();
+  var d = document.getElementById('datum-select').value;
+  if(k){ apiKey = k; localStorage.setItem('worldtides_api_key', k); }
+  datum = d; localStorage.setItem('worldtides_datum', d);
+  cache = null; cacheTm = 0;
+  closeSettings();
+  refresh();
+}
+
+// ── Data fetch ───────────────────────────────────────────────
+function formatTime(unix){
+  var d=new Date(unix*1000);
+  return pad(d.getHours())+':'+pad(d.getMinutes());
+}
+function formatH(m){ return parseFloat(m).toFixed(1)+'m'; }
+
+function setLoading(){
+  ['tide-height','high-height','low-height'].forEach(function(id){
+    document.getElementById(id).classList.add('loading-val');
+  });
+  document.getElementById('refresh-btn').classList.add('loading');
+  document.getElementById('refresh-btn').textContent = '⟳ Loading…';
+}
+function clearLoading(){
+  ['tide-height','high-height','low-height'].forEach(function(id){
+    document.getElementById(id).classList.remove('loading-val');
+  });
+  document.getElementById('refresh-btn').classList.remove('loading');
+  document.getElementById('refresh-btn').textContent = '⟳ Refresh';
+}
+
+function setStatus(pct){
+  document.getElementById('status-fill').style.width = pct+'%';
+}
+
+function applyData(data){
+  document.getElementById('tide-height').textContent  = data.height;
+  document.getElementById('high-height').textContent  = data.highH;
+  document.getElementById('high-time').textContent    = data.highT;
+  document.getElementById('low-height').textContent   = data.lowH;
+  document.getElementById('low-time').textContent     = data.lowT;
+  document.getElementById('location-display').textContent = data.location;
+
+  var pill = document.getElementById('tide-pill');
+  if(data.rising){
+    pill.textContent = '▲ RISING';
+    pill.className = 'pill rising';
+  } else {
+    pill.textContent = '▼ FALLING';
+    pill.className = 'pill falling';
+  }
+
+  if(data.graphToday)    { graphToday    = data.graphToday;    }
+  if(data.graphTomorrow) { graphTomorrow = data.graphTomorrow; }
+  if(data.nowIdx !== undefined) graphNowIdx = data.nowIdx;
+
+  drawChart();
+  clearLoading();
+  setStatus(100);
+  setTimeout(function(){ setStatus(0); }, 2000);
+}
+
+function fetchData(lat, lon){
+  setLoading(); setStatus(20);
+  var now = Math.floor(Date.now()/1000);
+  var d   = new Date(); d.setHours(0,0,0,0);
+  var midnight = Math.floor(d.getTime()/1000);
+
+  var url = 'https://www.worldtides.info/api/v3?heights&extremes' +
+    '&lat='+lat+'&lon='+lon +
+    '&start='+midnight+'&length=194400&step=3600' +
+    '&datum='+datum+'&key='+apiKey;
+
+  fetch(url)
+    .then(function(r){ return r.json(); })
+    .then(function(resp){
+      if(resp.status !== 200){ throw new Error(resp.error || 'API error'); }
+      setStatus(60);
+      var heights  = resp.heights;
+      var extremes = resp.extremes;
+      var nowIdx   = 0;
+      var curH     = heights[0].height;
+
+      for(var i=0; i<heights.length-1; i++){
+        if(now >= heights[i].dt && now < heights[i+1].dt){
+          var frac = (now - heights[i].dt)/(heights[i+1].dt - heights[i].dt);
+          curH = heights[i].height + frac*(heights[i+1].height - heights[i].height);
+          nowIdx = i; break;
+        }
+      }
+      if(nowIdx < 0) nowIdx = 0;
+      if(nowIdx > 24) nowIdx = 24;
+      var rising = heights[nowIdx+1] && heights[nowIdx+1].height > heights[nowIdx].height;
+
+      var nextHigh=null, nextLow=null;
+      for(var j=0; j<extremes.length; j++){
+        if(extremes[j].dt >= now){
+          if(!nextHigh && extremes[j].type==='High') nextHigh=extremes[j];
+          if(!nextLow  && extremes[j].type==='Low')  nextLow=extremes[j];
+          if(nextHigh && nextLow) break;
+        }
+      }
+
+      var today    = [];
+      var tomorrow = [];
+      for(var k=0;  k<25 && k<heights.length;    k++) today.push(heights[k].height);
+      for(var k=24; k<49 && k<heights.length; k++) tomorrow.push(heights[k].height);
+
+      // Reverse geocode location
+      fetch('https://nominatim.openstreetmap.org/reverse?format=json&lat='+lat+'&lon='+lon,
+        { headers: { 'User-Agent': 'TideInCPWA/1.0' } })
+        .then(function(r){ return r.json(); })
+        .then(function(geo){
+          var a = geo.address;
+          var name = a.town||a.village||a.suburb||a.city||a.county||'Unknown';
+          setStatus(90);
+          applyData({
+            height: formatH(curH), rising: rising,
+            highH: nextHigh ? formatH(nextHigh.height) : '-.-m',
+            highT: nextHigh ? formatTime(nextHigh.dt)  : '--:--',
+            lowH:  nextLow  ? formatH(nextLow.height)  : '-.-m',
+            lowT:  nextLow  ? formatTime(nextLow.dt)   : '--:--',
+            location: name,
+            graphToday: today, graphTomorrow: tomorrow, nowIdx: nowIdx
+          });
+          cache={height:formatH(curH),rising:rising,
+            highH:nextHigh?formatH(nextHigh.height):'-.-m',
+            highT:nextHigh?formatTime(nextHigh.dt):'--:--',
+            lowH:nextLow?formatH(nextLow.height):'-.-m',
+            lowT:nextLow?formatTime(nextLow.dt):'--:--',
+            location:name,graphToday:today,graphTomorrow:tomorrow,nowIdx:nowIdx};
+          cacheTm = Date.now();
+        })
+        .catch(function(){ applyData({
+          height:formatH(curH),rising:rising,
+          highH:nextHigh?formatH(nextHigh.height):'-.-m',
+          highT:nextHigh?formatTime(nextHigh.dt):'--:--',
+          lowH:nextLow?formatH(nextLow.height):'-.-m',
+          lowT:nextLow?formatTime(nextLow.dt):'--:--',
+          location:'Unknown',graphToday:today,graphTomorrow:tomorrow,nowIdx:nowIdx
+        }); });
+    })
+    .catch(function(e){
+      clearLoading(); setStatus(0);
+      document.getElementById('location-display').textContent = 'Error';
+      console.error('[TIDE] fetch error:', e);
+    });
+}
+
+function refresh(){
+  if(!apiKey){
+    document.getElementById('no-key-msg').style.display = 'block';
+    document.getElementById('tide-card').style.display  = 'none';
+    openSettings(); return;
+  }
+  document.getElementById('no-key-msg').style.display = 'none';
+  document.getElementById('tide-card').style.display  = '';
+
+  if(cache && (Date.now()-cacheTm) < CACHE_MAX){ applyData(cache); return; }
+
+  navigator.geolocation.getCurrentPosition(
+    function(pos){ fetchData(pos.coords.latitude, pos.coords.longitude); },
+    function(err){ document.getElementById('location-display').textContent =
+      err.code===1 ? 'No GPS permission' : 'GPS error';
+      clearLoading();
+    },
+    { timeout: 15000, maximumAge: 300000 }
+  );
+}
+
+// ── Chart ─────────────────────────────────────────────────────
+function showChart(which){
+  activeChart = which;
+  document.getElementById('btn-today').className = 'chart-btn'+(which==='today'?' active':'');
+  document.getElementById('btn-tmr').className   = 'chart-btn'+(which==='tomorrow'?' active':'');
+  document.getElementById('chart-title').textContent =
+    which==='today' ? '24H Tide Chart' : 'Tomorrow Tides';
+  drawChart();
+}
+
+function drawChart(){
+  var cv  = document.getElementById('chart-canvas');
+  var ctx = cv.getContext('2d');
+  var W   = cv.offsetWidth;
+  var H   = cv.offsetHeight;
+  cv.width  = W * window.devicePixelRatio;
+  cv.height = H * window.devicePixelRatio;
+  ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+
+  var data = activeChart==='today' ? graphToday : graphTomorrow;
+  if(!data || data.length===0){
+    ctx.fillStyle='#f0d0b0';
+    ctx.font='13px Courier Prime, monospace';
+    ctx.textAlign='center';
+    ctx.fillText('No data — press Refresh', W/2, H/2);
+    return;
+  }
+
+  var ml=38, mr=6, mt=8, mb=20;
+  var cw=W-ml-mr, ch=H-mt-mb;
+  var N=data.length;
+  var minV=Math.min.apply(null,data), maxV=Math.max.apply(null,data);
+  var pad=(maxV-minV)*0.1;
+  var dMin=minV-pad, dMax=maxV+pad, dRange=dMax-dMin;
+  if(dRange===0) dRange=1;
+
+  // Chart bg
+  ctx.fillStyle='#fffdf8';
+  ctx.fillRect(ml,mt,cw,ch);
+
+  // Gridlines
+  ctx.fillStyle='rgba(240,176,96,0.4)';
+  for(var g=1;g<=3;g++){
+    var gy=mt+g*ch/4;
+    for(var gx=ml;gx<ml+cw;gx+=6) ctx.fillRect(gx,gy,4,1);
+  }
+
+  // Bars
+  var slot=cw/N;
+  var bw=Math.max(slot-1,1);
+  var bottom=mt+ch;
+
+  var colors=['#fcefd8','#f5d090','#e89030','#e86020','#c84000'];
+  function barColor(pct){
+    if(pct<0.2) return colors[0];
+    if(pct<0.4) return colors[1];
+    if(pct<0.6) return colors[2];
+    if(pct<0.8) return colors[3];
+    return colors[4];
+  }
+
+  for(var i=0;i<N;i++){
+    var x  = ml + i*slot;
+    var pct= (data[i]-dMin)/dRange;
+    var bh = Math.round(pct*ch); if(bh<1) bh=1;
+    var top= bottom-bh;
+
+    // 3-band gradient
+    for(var b=0;b<3;b++){
+      var bt=top+b*bh/3, bb2=top+(b+1)*bh/3;
+      ctx.fillStyle=barColor(pct*(1-b*0.25));
+      ctx.fillRect(x, bt, bw, bb2-bt);
+    }
+    // Foam cap
+    ctx.fillStyle='rgba(255,255,230,0.8)';
+    ctx.fillRect(x, top, bw, 2);
+  }
+
+  // NOW marker (today only)
+  if(activeChart==='today' && graphNowIdx >= 0 && graphNowIdx < N){
+    var ni   = graphNowIdx;
+    var nx   = ml + ni*slot + bw/2;
+    var npct = (data[ni]-dMin)/dRange;
+    var nTop = bottom - Math.round(npct*ch);
+
+    // Dashed line
+    ctx.setLineDash([3,3]);
+    ctx.strokeStyle='#e86020';
+    ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(nx,mt+14); ctx.lineTo(nx,nTop); ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Dot
+    ctx.fillStyle='#e86020';
+    ctx.beginPath(); ctx.arc(nx,nTop,5,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle='white'; ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.arc(nx,nTop,5,0,Math.PI*2); ctx.stroke();
+
+    // NOW pill
+    var pw=28;
+    var px2=Math.min(Math.max(nx-pw/2, ml+1), ml+cw-pw-1);
+    ctx.fillStyle='#e86020';
+    ctx.fillRect(px2, mt+1, pw, 13);
+    ctx.fillStyle='white';
+    ctx.font='bold 9px Courier Prime, monospace';
+    ctx.textAlign='center';
+    ctx.fillText('NOW', px2+pw/2, mt+11);
+    ctx.textAlign='left';
+  }
+
+  // Left axis
+  ctx.fillStyle='#f0b060';
+  ctx.fillRect(ml-1,mt,1,ch);
+
+  ctx.fillStyle='#e86020';
+  ctx.font='bold 9px Courier Prime, monospace';
+  ctx.textAlign='right';
+  ctx.fillText(maxV.toFixed(1)+'m', ml-3, mt+9);
+  ctx.fillStyle='#c09060';
+  ctx.fillText(minV.toFixed(1)+'m', ml-3, bottom);
+  ctx.textAlign='left';
+
+  // Time axis
+  ctx.fillStyle='#f0b060';
+  ctx.fillRect(ml,bottom,cw,1);
+  var timeLbls=['00','06','12','18','24'];
+  var timeHrs =[0,6,12,18,24];
+  for(var ti=0;ti<5;ti++){
+    var tx=ml+Math.round(timeHrs[ti]*cw/24);
+    ctx.fillStyle='#c09060';
+    ctx.font='8px Courier Prime, monospace';
+    ctx.textAlign='center';
+    ctx.fillText(timeLbls[ti], tx, bottom+mb-2);
+  }
+  ctx.textAlign='left';
+}
+
+// ── Sunny Day Animation ───────────────────────────────────────
+(function(){
+  var cv  = document.getElementById('scene-canvas');
+  var ctx = cv.getContext('2d');
+  var tick= 0;
+
+  function isin(p, amp){
+    var lut=[0,13,25,37,48,57,64,70,74,76,76,74,70,64,57,48];
+    p&=63; var q=p&15;
+    var v = p<16?lut[q]:p<32?lut[15-q]:p<48?-lut[q]:-lut[15-q];
+    return (v*amp)/76;
+  }
+
+  function frame(){
+    var W=cv.width, H=cv.height;
+    var dpr=window.devicePixelRatio||1;
+    var w=W/dpr, h=H/dpr;
+    var hz=Math.floor(h*0.52);
+    tick++;
+    ctx.clearRect(0,0,W,H);
+    ctx.save(); ctx.scale(dpr,dpr);
+
+    // Sky
+    var skyColors=['#c8eaf8','#b8e0f5','#a8d6f0','#d8eef8'];
+    for(var b=0;b<4;b++){
+      ctx.fillStyle=skyColors[b];
+      ctx.fillRect(0,b*(hz/4),w,hz/4+2);
+    }
+
+    // Sun
+    var sr=10+isin(Math.floor(tick/8)&63,1);
+    ctx.fillStyle='#f0a000';
+    ctx.beginPath();ctx.arc(w-22,16,sr,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='rgba(240,160,0,0.18)';
+    ctx.beginPath();ctx.arc(w-22,16,sr+6,0,Math.PI*2);ctx.fill();
+    var rays=[[w-22,2],[w-22,30],[w-8,16],[w-36,16],[w-12,6],[w-32,6],[w-12,26],[w-32,26]];
+    ctx.fillStyle='#e8900a';
+    rays.forEach(function(r){ ctx.fillRect(r[0]-1,r[1]-1,3,2); });
+
+    // Clouds
+    for(var ci=0;ci<3;ci++){
+      var cx=((10+ci*65+(tick*4))%(w+50))-25;
+      var cy=7+ci*5;
+      ctx.fillStyle='white';
+      ctx.fillRect(cx,cy+3,24,6); ctx.fillRect(cx+3,cy,18,6);
+      ctx.fillRect(cx+1,cy+8,22,4);
+      ctx.fillStyle='rgba(220,240,255,0.6)';
+      ctx.fillRect(cx-2,cy+5,4,4); ctx.fillRect(cx+22,cy+5,4,4);
+    }
+
+    // Sea
+    ctx.fillStyle='#1a7090';
+    ctx.fillRect(0,hz,w,h-hz);
+
+    // Waves
+    var waveCols=['#2090b0','#28a0c0','#38b8d0'];
+    for(var l=0;l<3;l++){
+      var wy=hz+2+l*5, amp=4-l;
+      for(var wx=0;wx<w;wx+=4){
+        var wh=amp+isin(((wx*3)+(tick*(l+1)*2))&63,amp);
+        var top=wy-wh, fh=h-top;
+        if(fh<1) continue;
+        ctx.fillStyle=waveCols[l];
+        ctx.fillRect(wx,top,3,fh);
+        if(wh>=amp){ ctx.fillStyle='rgba(240,180,60,0.7)'; ctx.fillRect(wx,top,3,1); }
+      }
+    }
+
+    // Lighthouse
+    var lhx=10, lhy=hz-30;
+    if(lhy<2) lhy=2;
+    ctx.fillStyle='#f8f0e0'; ctx.fillRect(lhx,lhy,9,30);
+    for(var s=0;s<4;s++){
+      ctx.fillStyle=s%2===0?'#e8600a':'#f8f0e0';
+      ctx.fillRect(lhx,lhy+s*7,9,5);
+    }
+    if(Math.floor(tick/3)%4<2){
+      ctx.fillStyle='rgba(255,220,40,0.9)';
+      ctx.fillRect(lhx-5,lhy>5?lhy-5:0,19,7);
+    }
+
+    // Seagulls
+    var gdata=[[65,15],[85,10],[100,18]];
+    ctx.fillStyle='#446688';
+    gdata.forEach(function(g,gi){
+      var fl=isin((tick*3+gi*20)&63,2);
+      ctx.fillRect(g[0],g[1]+fl,3,1); ctx.fillRect(g[0]+4,g[1]-fl,3,1);
+    });
+
+    // Boat
+    var bob=isin((tick*2)&63,2);
+    var bx=w-48, by=hz+3+bob;
+    ctx.fillStyle='#c84000'; ctx.fillRect(bx,by,24,6); ctx.fillRect(bx+2,by-1,20,1);
+    ctx.fillStyle='#f8f0e0'; ctx.fillRect(bx+10,by-14,3,14);
+    ctx.fillStyle='#e8600a'; ctx.fillRect(bx+13,by-14,9,7);
+
+    // Border
+    ctx.strokeStyle='#e8600a'; ctx.lineWidth=3;
+    ctx.strokeRect(1,1,w-2,h-2);
+    ctx.strokeStyle='#f0b060'; ctx.lineWidth=1;
+    ctx.strokeRect(4,4,w-8,h-8);
+    // Corner brackets
+    ctx.fillStyle='#e8600a';
+    [[0,0],[w-14,0],[0,h-14],[w-14,h-14]].forEach(function(p){
+      ctx.fillRect(p[0],p[1],14,3); ctx.fillRect(p[0],p[1],3,14);
+    });
+
+    ctx.restore();
+    requestAnimationFrame(frame);
+  }
+
+  function resize(){
+    var dpr=window.devicePixelRatio||1;
+    var rect=cv.getBoundingClientRect();
+    cv.width =rect.width*dpr;
+    cv.height=rect.height*dpr;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+  requestAnimationFrame(frame);
+})();
+
+// ── iOS install banner ────────────────────────────────────────
+(function(){
+  var isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  var isStandalone = window.navigator.standalone;
+  if(isIOS && !isStandalone){
+    document.getElementById('install-banner').classList.add('show');
+  }
+})();
+
+// ── Init ─────────────────────────────────────────────────────
+window.addEventListener('load', function(){
+  if(apiKey){ refresh(); }
+  else { openSettings(); }
+});
+
+// Redraw chart on resize
+window.addEventListener('resize', function(){ drawChart(); });
+</script>
+
+</body>
+</html>
