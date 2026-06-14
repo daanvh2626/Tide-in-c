@@ -291,7 +291,7 @@
     #chart-canvas {
       display: block;
       width: 100%;
-      height: 160px;
+      height: 175px;
     }
 
     /* ── REFRESH BUTTON ── */
@@ -838,7 +838,7 @@ function drawChart(){
     return;
   }
 
-  var ml=42, mr=6, mt=8, mb=20;
+  var ml=42, mr=6, mt=8, mb=22;
   var cw=W-ml-mr, ch=H-mt-mb;
   var N=data.length;
   var minV=Math.min.apply(null,data), maxV=Math.max.apply(null,data);
@@ -920,7 +920,54 @@ function drawChart(){
     ctx.textAlign='left';
   }
 
-  // Left axis
+  // ── HIGH / LOW peak labels inside chart ─────────────────────
+  // Find local maxima and minima in the data
+  for(var i=1;i<N-1;i++){
+    var prev=data[i-1], curr=data[i], next=data[i+1];
+    var isHigh = curr > prev && curr > next;
+    var isLow  = curr < prev && curr < next;
+    if(!isHigh && !isLow) continue;
+
+    var bx2  = ml + i*slot + bw/2;
+    var pct2 = (curr-dMin)/dRange;
+    var bh2  = Math.round(pct2*ch);
+    var top2 = bottom - bh2;
+
+    var lbl  = curr.toFixed(1)+'m';
+    // Hour label — index = hour of day
+    var hr   = i; // each index = 1 hour from midnight
+    var hrStr= (hr<10?'0':'')+hr+':00';
+
+    if(isHigh){
+      // Orange pill above bar
+      ctx.fillStyle='#e8600a';
+      var pw2=34, ph2=11;
+      var plx=Math.min(Math.max(bx2-pw2/2, ml+1), ml+cw-pw2-1);
+      ctx.fillRect(plx, top2-ph2-4, pw2, ph2);
+      ctx.fillStyle='white';
+      ctx.font='bold 8px Courier Prime, monospace';
+      ctx.textAlign='center';
+      ctx.fillText(lbl, plx+pw2/2, top2-ph2+5);
+      // Time below pill
+      ctx.fillStyle='#c84000';
+      ctx.font='7px Courier Prime, monospace';
+      ctx.fillText(hrStr, bx2, top2-17);
+    } else {
+      // Blue label below bar top (inside the bar near base)
+      var lbx=Math.min(Math.max(bx2-17, ml+1), ml+cw-35);
+      ctx.fillStyle='#1a66aa';
+      ctx.font='bold 8px Courier Prime, monospace';
+      ctx.textAlign='center';
+      ctx.fillText(lbl, bx2, top2+10);
+      // Time
+      ctx.fillStyle='#2288cc';
+      ctx.font='7px Courier Prime, monospace';
+      ctx.fillText(hrStr, bx2, top2+20);
+    }
+    ctx.textAlign='left';
+  }
+
+  // ── Left axis ────────────────────────────────────────────────
   ctx.fillStyle='#f0b060';
   ctx.fillRect(ml-1,mt,1,ch);
 
@@ -932,17 +979,22 @@ function drawChart(){
   ctx.fillText(minV.toFixed(1)+'m', ml-3, bottom);
   ctx.textAlign='left';
 
-  // Time axis
+  // ── Time axis — every 2 hours ────────────────────────────────
   ctx.fillStyle='#f0b060';
   ctx.fillRect(ml,bottom,cw,1);
-  var timeLbls=['00','06','12','18','24'];
-  var timeHrs =[0,6,12,18,24];
-  for(var ti=0;ti<5;ti++){
-    var tx=ml+Math.round(timeHrs[ti]*cw/24);
-    ctx.fillStyle='#c09060';
-    ctx.font='8px Courier Prime, monospace';
+
+  // mb needs to fit 2-hour labels — increase canvas height via CSS
+  for(var ti=0;ti<=24;ti+=2){
+    var tx=ml+Math.round(ti*cw/24);
+    var isMajor=(ti%6===0);
+    // Tick mark
+    ctx.fillStyle=isMajor?'#e86020':'#d0a070';
+    ctx.fillRect(tx,bottom,1,isMajor?5:3);
+    // Label — every 2 hours, major ones bolder
+    ctx.font=(isMajor?'bold ':'')+'8px Courier Prime, monospace';
+    ctx.fillStyle=isMajor?'#c84000':'#b08050';
     ctx.textAlign='center';
-    ctx.fillText(timeLbls[ti], tx, bottom+mb-2);
+    ctx.fillText((ti<10?'0':'')+ti, tx, bottom+mb-2);
   }
   ctx.textAlign='left';
 }
