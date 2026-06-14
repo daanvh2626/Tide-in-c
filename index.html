@@ -41,25 +41,25 @@
     /* ── WRAPPER — phone-like container on desktop ── */
     .app {
       width: 360px;
-      height: 780px;
       max-width: 100vw;
-      max-height: 100dvh;
+      min-height: 100dvh;
       background: var(--cream);
       display: flex;
       flex-direction: column;
       position: relative;
-      overflow: hidden;
+      overflow-x: hidden;
+      overflow-y: auto;
       margin: 0 auto;
     }
 
     /* On very small screens fall back to full width */
     @media (max-width: 360px) {
-      .app { width: 100%; height: 100dvh; }
+      .app { width: 100%; }
     }
 
     /* Centre on desktop */
     @media (min-width: 400px) {
-      body { justify-content: center; align-items: center; background: #1a0e05; min-height: 100dvh; }
+      body { justify-content: center; background: #1a0e05; min-height: 100dvh; }
     }
 
     /* ── SCENE — animated top panel ── */
@@ -838,7 +838,7 @@ function drawChart(){
     return;
   }
 
-  var ml=38, mr=6, mt=8, mb=20;
+  var ml=42, mr=6, mt=8, mb=20;
   var cw=W-ml-mr, ch=H-mt-mb;
   var N=data.length;
   var minV=Math.min.apply(null,data), maxV=Math.max.apply(null,data);
@@ -1075,10 +1075,10 @@ function drawChart(){
       }
     });
 
-    // ── LIGHTHOUSE — detailed, bigger ─────────────────────────
-    var lhx=12, lhy=hz-42;
-    if(lhy<2) lhy=2;
+    // ── LIGHTHOUSE — right side ──────────────────────────────
     var lhw=12, lhh=42;
+    var lhx=w-lhw-12, lhy=hz-42;
+    if(lhy<2) lhy=2;
     // Base
     ctx.fillStyle='#e0d0b0'; ctx.fillRect(lhx-2,lhy+lhh-6,lhw+4,6);
     // Tower
@@ -1090,15 +1090,14 @@ function drawChart(){
     // Light housing
     ctx.fillStyle='#2a2a2a'; ctx.fillRect(lhx-2,lhy-8,lhw+4,8);
     ctx.fillStyle='#444'; ctx.fillRect(lhx-1,lhy-9,lhw+2,2);
-    // Flash glow
+    // Flash glow — beam goes LEFT from right-side lighthouse
     var flashOn=Math.floor(tick/2.5)%6 < 2;
     if(flashOn){
-      // Wide beam
       ctx.fillStyle='rgba(255,230,40,0.12)';
       ctx.beginPath();
       ctx.moveTo(lhx+lhw/2,lhy-4);
-      ctx.lineTo(lhx+lhw/2+80,lhy+20);
-      ctx.lineTo(lhx+lhw/2+80,lhy-20);
+      ctx.lineTo(lhx+lhw/2-80,lhy+20);
+      ctx.lineTo(lhx+lhw/2-80,lhy-20);
       ctx.fill();
       ctx.fillStyle='rgba(255,230,40,0.85)';
       ctx.fillRect(lhx-6,lhy-12,lhw+14,8);
@@ -1113,10 +1112,10 @@ function drawChart(){
       ctx.fillRect(g[0]+6, g[1]-fl, 5, 2);
     });
 
-    // ── BOAT — bigger, more detailed ──────────────────────────
+    // ── BOAT — left-centre, bigger, more detailed ────────────
     var bob=isin(Math.floor(tick*1.5)&63,3);
     var btilt=isin(Math.floor(tick*1.5+8)&63,1);
-    var bx=w-68, by=hz+4+bob;
+    var bx=Math.floor(w*0.22), by=hz+4+bob;
     // Wake
     ctx.fillStyle='rgba(255,255,255,0.3)';
     for(var wi=0;wi<20;wi+=3) ctx.fillRect(bx+32+wi,by+5,2,1);
